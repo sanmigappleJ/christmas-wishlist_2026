@@ -1,3 +1,28 @@
+import { initializeApp } from "https://gstatic.com";
+import {
+  getFirestore,
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  orderBy
+} from "https://gstatic.com";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBU-9TxC1k3fHTdGSdd1ti2S70H4QtjpkQ",
+  authDomain: "christmas-wishlist-2026.firebaseapp.com",
+  projectId: "christmas-wishlist-2026",
+  storageBucket: "christmas-wishlist-2026.firebasestorage.app",
+  messagingSenderId: "31993292527",
+  appId: "1:31993292527:web:757c3ec22e483b2b4b9d1a"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 
@@ -320,450 +345,184 @@ function birthdayTune() {
 }
 
 /* ---------------- wishes ---------------- */
-const wishlists =
-JSON.parse(
-    localStorage.getItem(
-        "wishlists"
-    )
-) || [];
+let wishlists = [];
 let activeWishlist = null;
+const wishlistsRef = collection(db, "wishlists");
 
-/* ==================================
-   CREATE WISHLIST
-================================== */
+// Real-time listener: updates wishlists automatically across all devices
+onSnapshot(query(wishlistsRef, orderBy("createdAt", "asc")), (snapshot) => {
+  wishlists = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-document
-.getElementById("addWishlistBtn")
-.addEventListener(
-"click",
-() => {
-
-    document
-    .getElementById(
-        "wishlistDialog"
-    )
-    .showModal();
-
+  if (!wishlists.length) {
+    activeWishlist = null;
+    document.querySelector("#wishGrid").innerHTML =
+      `<p class="loading">Create the first wishlist 🎄</p>`;
+  } else {
+    if (activeWishlist === null || activeWishlist >= wishlists.length) {
+      activeWishlist = 0;
+    }
+    showWishlist(activeWishlist);
+  }
+  renderTabs();
 });
 
-document
-.getElementById(
-    "createWishlistBtn"
-)
-.addEventListener(
-    "click",
-    createWishlist
-);
+document.getElementById("addWishlistBtn").addEventListener("click", () => {
+  document.getElementById("wishlistDialog").showModal();
+});
 
-function createWishlist(){
+document.getElementById("createWishlistBtn").addEventListener("click", createWishlist);
 
-    const owner =
-    document
-    .getElementById(
-        "wishlistOwner"
-    )
-    .value
-    .trim();
+async function createWishlist() {
+  const ownerInput = document.getElementById("wishlistOwner");
+  const owner = ownerInput.value.trim();
 
-    if(!owner){
+  if (!owner) {
+    alert("Please enter a name.");
+    return;
+  }
 
-        alert(
-            "Please enter a name."
-        );
+  const exists = wishlists.some(
+    (list) => list.owner.toLowerCase() === owner.toLowerCase()
+  );
 
-        return;
-    }
+  if (exists) {
+    alert("Wishlist already exists!");
+    return;
+  }
 
-    const exists =
-    wishlists.some(
+  activeWishlist = wishlists.length;
+  ownerInput.value = "";
+  document.getElementById("wishlistDialog").close();
 
-        list =>
+  await addDoc(wishlistsRef, {
+    owner,
+    wishes: [],
+    createdAt: Date.now()
+  });
+}
 
-        list.owner
-        .toLowerCase()
+function renderTabs() {
+  const container = document.querySelector(".wishlist-tabs");
+  container.innerHTML = "";
 
-        ===
+  wishlists.forEach((list, index) => {
+    const btn = document.createElement("button");
+    btn.className = "wishlist-tab";
+    if (index === activeWishlist) btn.classList.add("active");
 
-        owner
-        .toLowerCase()
+    btn.innerHTML = `
+      🎁 ${list.owner}
+      <span class="wishlist-remove" onclick="event.stopPropagation(); deleteWishlist(${index});">
+        ✕
+      </span>
+    `;
 
-    );
-
-    if(exists){
-
-        alert(
-            "Wishlist already exists!"
-        );
-
-        return;
-    }
-
-    const wishlist = {
-
-        owner,
-        wishes: []
-
+    btn.onclick = () => {
+      activeWishlist = index;
+      renderTabs();
+      showWishlist(index);
     };
 
-    wishlists.push(
-        wishlist
-    );
-
-    localStorage.setItem(
-        "wishlists",
-        JSON.stringify(wishlists)
-    );
-
-    activeWishlist =
-    wishlists.length - 1;
-
-    document
-    .getElementById(
-        "wishlistOwner"
-    )
-    .value = "";
-
-    document
-    .getElementById(
-        "wishlistDialog"
-    )
-    .close();
-
-    renderTabs();
-
-    showWishlist(
-        activeWishlist
-    );
+    container.appendChild(btn);
+  });
 }
 
-/* ==================================
-   TABS
-================================== */
+function showWishlist(index) {
+  const list = wishlists[index];
+  if (!list) return;
 
-function renderTabs(){
-
-    const container =
-    document.querySelector(
-        ".wishlist-tabs"
-    );
-
-    container.innerHTML = "";
-
-    wishlists.forEach(
-
-        (list,index)=>{
-
-            const btn =
-            document.createElement(
-                "button"
-            );
-
-            btn.className =
-            "wishlist-tab";
-
-            if(
-              index === activeWishlist
-            ){
-
-               btn.classList.add(
-                "active"
-               );
-            }
-
-              btn.innerHTML = `
-                  🎁 ${list.owner}
-                  <span
-                      class="wishlist-remove"
-                      onclick="
-                          event.stopPropagation();
-                          deleteWishlist(${index});
-                      ">
-                      ✕
-                  </span>
-              `;
-
-            btn.onclick = ()=>{
-
-                activeWishlist =
-                index;
-
-                renderTabs();
-
-                showWishlist(index);
-            };
-
-            container.appendChild(
-                btn
-            );
-        }
-    );
-}
-
-/* ==================================
-   SHOW WISHLIST
-================================== */
-function showWishlist(index){
-
-    const list = wishlists[index];
-
-    document
-    .querySelector("#wishGrid")
-    .innerHTML = `
-
+  document.querySelector("#wishGrid").innerHTML = `
     <div class="wishlist-page">
+      <h2>🎁 ${list.owner}'s Wishlist</h2>
+      <p class="wishlist-count">${list.wishes.length}/9 Wishes</p>
 
-        <h2>
-        🎁 ${list.owner}'s Wishlist
-        </h2>
+      <div class="wish-form">
+        <input id="wishTitle" placeholder="Wish name">
+        <input id="wishLink" placeholder="Product link">
+        <input id="wishPrice" placeholder="Price">
+        <button class="btn btn-gold" onclick="addWish(${index})">Add Wish</button>
+      </div>
 
-        <p class="wishlist-count">
-
-        ${list.wishes.length}/9 Wishes
-
-        </p>
-
-        <div class="wish-form">
-
-            <input
-                id="wishTitle"
-                placeholder="Wish name">
-
-            <input
-                id="wishLink"
-                placeholder="Product link">
-
-            <input
-                id="wishPrice"
-                placeholder="Price">
-
-            <button
-                class="btn btn-gold"
-                onclick="addWish(${index})">
-
-                Add Wish
-
-            </button>
-
-        </div>
-
-        <div class="wishlist-items">
-
-            ${
-            list.wishes.length === 0
-
-            ?
-
-            `<p class="empty">
-                No wishes added yet.
-            </p>`
-
-            :
-
-            list.wishes.map((wish,wishIndex) => `
-
+      <div class="wishlist-items">
+        ${
+          list.wishes.length === 0
+            ? `<p class="empty">No wishes added yet.</p>`
+            : list.wishes
+                .map(
+                  (wish, wishIndex) => `
                 <div class="wish">
-
-                    <button
-                        class="del"
-                        onclick="deleteWish(${index}, ${wishIndex})">
-
-                        ✕
-
-                    </button>
-
-                    <div class="catalog-body">
-
-                        <h3>
-                            ${wish.title}
-                        </h3>
-
-                        <div class="meta">
-
-                            <span class="price">
-                                ${wish.price || ""}
-                            </span>
-
-                        </div>
-
-                        ${
-                        wish.link
-
-                        ?
-
-                        `<a
-                            href="${wish.link}"
-                            target="_blank"
-                            class="shop">
-
-                            View Item ↗
-
-                        </a>`
-
-                        :
-
-                        `<span class="shop">
-                            No link provided
-                        </span>`
-                        }
-
+                  <button class="del" onclick="deleteWish(${index}, ${wishIndex})">✕</button>
+                  <div class="catalog-body">
+                    <h3>${wish.title}</h3>
+                    <div class="meta">
+                      <span class="price">${wish.price || ""}</span>
                     </div>
-
-                </div>
-
-            `).join("")
-            }
-
-        </div>
-
+                    ${
+                      wish.link
+                        ? `<a href="${wish.link}" target="_blank" class="shop">View Item ↗</a>`
+                        : `<span class="shop">No link provided</span>`
+                    }
+                  </div>
+                </div>`
+                )
+                .join("")
+        }
+      </div>
     </div>
-
-    `;
+  `;
 }
 
-/* ==================================
-   ADD WISH
-================================== */
-window.addWish = function(index){
+window.addWish = async function (index) {
+  const title = document.getElementById("wishTitle").value.trim();
+  const link = document.getElementById("wishLink").value.trim();
+  const price = document.getElementById("wishPrice").value.trim();
 
-    const title =
-    document
-    .getElementById("wishTitle")
-    .value
-    .trim();
+  if (!title) {
+    alert("Please enter a wish name.");
+    return;
+  }
 
-    const link =
-    document
-    .getElementById("wishLink")
-    .value
-    .trim();
+  const targetList = wishlists[index];
+  if (targetList.wishes.length >= 9) {
+    alert("Maximum of 9 wishes allowed 🎁");
+    return;
+  }
 
-    const price =
-    document
-    .getElementById("wishPrice")
-    .value
-    .trim();
-
-    if(!title){
-
-        alert(
-            "Please enter a wish name."
-        );
-
-        return;
-    }
-
-        if(
-        wishlists[index]
-        .wishes.length >= 9
-    ){
-
-        alert(
-            "Maximum of 9 wishes allowed 🎁"
-        );
-
-        return;
-    }
-
-    wishlists[index].wishes.push({
-
-        title,
-        link,
-        price
-
-    });
-
-    localStorage.setItem(
-    "wishlists",
-    JSON.stringify(wishlists)
-    );
-
-    showWishlist(index);
-}
-
-window.deleteWish = function(
-    wishlistIndex,
-    wishIndex
-){
-
-    if(
-        !confirm(
-            "Delete this wish?"
-        )
-    ){
-        return;
-    }
-
-    wishlists[
-        wishlistIndex
-    ].wishes.splice(
-        wishIndex,
-        1
-    );
-
-    localStorage.setItem(
-        "wishlists",
-        JSON.stringify(wishlists)
-    );
-
-    showWishlist(
-        wishlistIndex
-    );
+  const updatedWishes = [...targetList.wishes, { title, link, price }];
+  await updateDoc(doc(db, "wishlists", targetList.id), {
+    wishes: updatedWishes
+  });
 };
 
-if(wishlists.length){
+window.deleteWish = async function (wishlistIndex, wishIndex) {
+  if (!confirm("Delete this wish?")) return;
 
-    activeWishlist = 0;
+  const targetList = wishlists[wishlistIndex];
+  const updatedWishes = targetList.wishes.filter((_, i) => i !== wishIndex);
 
-    renderTabs();
+  await updateDoc(doc(db, "wishlists", targetList.id), {
+    wishes: updatedWishes
+  });
+};
 
-    showWishlist(0);
+window.deleteWishlist = async function (index) {
+  const targetList = wishlists[index];
+  if (!confirm(`Delete ${targetList.owner}'s wishlist?`)) return;
 
-}
-
-/* ==================================
-   DELETE WISH
-================================== */
-window.deleteWishlist = function(index){
-
-    if(
-        !confirm(
-            `Delete ${wishlists[index].owner}'s wishlist?`
-        )
-    ){
-        return;
-    }
-
-    wishlists.splice(index,1);
-
-    localStorage.setItem(
-        "wishlists",
-        JSON.stringify(wishlists)
-    );
-
-    if(!wishlists.length){
-
-        activeWishlist = null;
-
-        document
-        .querySelector("#wishGrid")
-        .innerHTML =
-        `<p class="loading">
-            Create the first wishlist 🎄
-        </p>`;
-
-    }else{
-
-        activeWishlist = 0;
-
-        showWishlist(0);
-    }
-
-    renderTabs();
+  await deleteDoc(doc(db, "wishlists", targetList.id));
 };
 
 /* ---------------- notes ---------------- */
 let allNotes = [];
-const fmtDate = (d) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+const notesRef = collection(db, "notes");
+
+const fmtDate = (d) =>
+  new Date(d).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+
 const noteHtml = (n, del = true) => `
   <article class="nb-entry">
     ${del ? `<button class="del" title="Remove note" data-del-note="${n.id}">✕</button>` : ""}
@@ -771,11 +530,8 @@ const noteHtml = (n, del = true) => `
     <footer><span>— ${esc(n.name)}</span><time>${esc(fmtDate(n.createdAt))}</time></footer>
   </article>`;
 
-function loadNotes() {
-  allNotes = JSON.parse(localStorage.getItem("christmasNotes")) || [];
-
+function renderNotes() {
   const wall = document.getElementById("notesWall");
-
   document.getElementById("notesCount").textContent = allNotes.length
     ? `📖 ${allNotes.length} notes in our Christmas notebook`
     : "📖 Our Christmas notebook";
@@ -785,123 +541,40 @@ function loadNotes() {
     : `<p class="nb-empty">No notes yet… be the first!</p>`;
 }
 
-const loadScript = (src) => new Promise((resolve, reject) => {
-  if (document.querySelector(`script[src="${src}"]`)) return resolve();
-  const s = document.createElement("script");
-  s.src = src;
-  s.onload = resolve;
-  s.onerror = reject;
-  document.head.appendChild(s);
-});
-
-// Lay the notes out on A4-sized notebook pages, then snapshot each page into a PDF.
-async function downloadNotebook() {
-  const password = prompt("Enter owner password");
-
-  if (password !== "i<3YukioYuki") {
-    alert("Incorrect password");
-    return;
-  }
-
-  if (!allNotes.length) return toast("No notes yet — leave the first one! 🎄");
-  const btn = $("#downloadNotes");
-  btn.disabled = true;
-  btn.textContent = "✍️ Binding the notebook…";
-  const holder = document.createElement("div");
-  holder.className = "pdf-holder";
-  document.body.appendChild(holder);
-
-  try {
-    await Promise.all([
-      loadScript("https://cloudflare.com"),
-      loadScript("https://cloudflare.com"),
-    ]);
-    await document.fonts?.ready;
-    const year = new Date().getFullYear();
-    const newPage = (first) => {
-      const page = document.createElement("section");
-      page.className = "pdf-page";
-      page.innerHTML = `${first ? `<header class="pdf-cover"><p>✦ Merry Christmas ✦</p><h1>Notes by the Christmas Tree</h1><p>${year} · ${allNotes.length} note${allNotes.length === 1 ? "" : "s"} from everyone 🎄</p></header>` : ""}<div class="pdf-content"></div><div class="pdf-foot"></div>`;
-      holder.appendChild(page);
-      return page;
-    };
-    const pages = [newPage(true)];
-    for (const n of allNotes) {
-      let content = pages.at(-1).querySelector(".pdf-content");
-      const wrap = document.createElement("div");
-      wrap.innerHTML = noteHtml(n, false);
-      const el = wrap.firstElementChild;
-      content.appendChild(el);
-      if (content.scrollHeight > content.clientHeight && content.children.length > 1) {
-        el.remove();
-        pages.push(newPage(false));
-        content = pages.at(-1).querySelector(".pdf-content");
-        content.appendChild(el);
-      }
-    }
-    pages.forEach((p, i) => (p.querySelector(".pdf-foot").textContent = `~ ${i + 1} / ${pages.length} ~`));
-
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit: "pt", format: "a4" });
-    const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
-    for (let i = 0; i < pages.length; i++) {
-      const canvas = await window.html2canvas(pages[i], { scale: 2, backgroundColor: "#fffdf5", useCORS: true });
-      if (i) pdf.addPage();
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, W, H);
-    }
-    pdf.save(`christmas-notebook-${year}.pdf`);
-    toast("Your Christmas notebook is ready! 📖");
-  } catch {
-    toast("Opening the print dialog — choose “Save as PDF” 🖨️");
-    window.print();
-  } finally {
-    holder.remove();
-    btn.disabled = false;
-    btn.textContent = "📥 Download notebook (PDF)";
-  }
-}
-
 function setupNotes() {
   $("#nbYear").textContent = `Christmas ${new Date().getFullYear()}`;
-  
-  // ✅ THIS LINE WAS MISSING: Loads saved notes immediately on page load/refresh
-  loadNotes();
-
   $("#downloadNotes").addEventListener("click", downloadNotebook);
 
-  $("#noteForm").addEventListener("submit", (e) => {
+  // Real-time listener: syncs notes automatically across all family devices
+  onSnapshot(query(notesRef, orderBy("createdAt", "asc")), (snapshot) => {
+    allNotes = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderNotes();
+  });
+
+  $("#noteForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const form = e.target;
 
-    const note = {
-      id: Date.now(),
+    await addDoc(notesRef, {
       name: form.name.value,
       message: form.message.value,
-      createdAt: new Date()
-    };
-
-    allNotes.push(note);
-    localStorage.setItem("christmasNotes", JSON.stringify(allNotes));
+      createdAt: Date.now()
+    });
 
     form.reset();
     toast("Note added! 🎄");
-    loadNotes();
   });
 
-  $("#notesWall").addEventListener("click", (e) => {
+  $("#notesWall").addEventListener("click", async (e) => {
     const d = e.target.closest("[data-del-note]");
     if (!d) return;
 
     if (!confirm("Remove this note?")) return;
 
-    allNotes = allNotes.filter((note) => note.id != d.dataset.delNote);
-    localStorage.setItem("christmasNotes", JSON.stringify(allNotes));
-
-    loadNotes();
+    await deleteDoc(doc(db, "notes", d.dataset.delNote));
     toast("Note removed 🗑️");
   });
 }
-
 
 /* ---------------- Welcome ---------------- */
 function setupWelcomeDialog() {
