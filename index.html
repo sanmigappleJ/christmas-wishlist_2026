@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Christmas Wishlist 🎄</title>
+  <meta name="description" content="Santa hired you as my Secret Santa this year! Peek at my Christmas wishlist and leave a note for everyone by the Christmas tree." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎅</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Fredoka:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+  <dialog
+    id="welcomeDialog"
+    class="modal">
+
+    <h3>
+        🎄 Welcome to Our Christmas Village 🎄
+    </h3>
+
+    <p>
+        ✨ Experience the village with Christmas music.
+    </p>
+
+    <div class="modal-actions">
+
+        <button
+            id="musicEnterBtn"
+            class="btn btn-red">
+
+            🔊 Enter with Music
+
+        </button>
+
+        <button
+            id="silentEnterBtn"
+            class="btn btn-ghost-dark">
+
+            🔇 Enter Silently
+
+        </button>
+
+    </div>
+
+  </dialog>
+
+  <dialog
+    id="noChoiceDialog"
+    class="modal">
+
+    <h3>
+        🤨 Excuse Me???
+    </h3>
+
+    <p>
+        SILENTLY TALAGA?? NO CHOICE KA.
+    </p>
+
+    <p>
+        Pasko sa Pinas is coming🎄
+    </p>
+
+    <p>
+        Santa personally requested it.
+    </p>
+
+    <div class="modal-actions">
+
+        <button
+            id="forceMusicBtn"
+            class="btn btn-red">
+
+            🎵 Fine, Play the Music
+
+        </button>
+
+    </div>
+
+</dialog>
+
+  <dialog
+ id="wishlistDialog"
+ class="modal">
+
+    <h3>
+      🎅 Santa Needs Your Name
+    </h3>
+    <p class="modal-sub"> Tell Santa whose wishlist we're creating 🎄</p>
+
+    <input
+        id="wishlistOwner"
+        placeholder="Enter your Name">
+
+    <div class="modal-actions">
+
+        <button
+            class="btn btn-ghost-dark"
+            onclick="document.getElementById('wishlistDialog').close()">
+
+            Cancel
+
+        </button>
+
+        <button
+            class="btn btn-red"
+            id="createWishlistBtn">
+
+            Create Wishlist
+
+        </button>
+
+    </div>
+
+  </dialog>
+
+  <canvas id="snow" aria-hidden="true"></canvas>
+
+  <!-- Twinkling string lights -->
+  <div class="lights" aria-hidden="true" id="lights"></div>
+
+  <header class="hero" id="top">
+    <div class="stars" id="stars" aria-hidden="true"></div>
+    <div class="moon" aria-hidden="true"></div>
+
+    <div class="hero-copy">
+      <p class="eyebrow">✦ Ho ho ho, everyone! ✦</p>
+      <h1>Our Christmas<br /><span>2026</span></h1>
+      <p class="lede">🎅 Santa hired all of us to be someone's Secret Santa this year! Browse everyone's wishlist, discover their Christmas wishes, and secretly pick the perfect gift.</p>
+      <p class="lede">✨ Create your own wishlist, share what you'd love to receive, and see what others are wishing for this Christmas.</p>
+      <p class="lede">And <b>PLEASE EVERYONE</b> — it would be so nice to leave a note for everyone by the Christmas Tree 🎄 I'll download them all and send the notebook to everyone. 💌</p>
+      <div class="hero-actions">
+        <a class="btn btn-gold" href="#wishlist">🎁 See our wishes</a>
+        <a class="btn btn-ghost" href="#notes">🎄 Leave a note</a>
+      </div>
+      <p class="catch-hint" id="catchHint"><span aria-hidden="true">🛷</span> Catch and click the sleigh to have your surprise!</p>
+    </div>
+
+    <!-- The flying sleigh -->
+    <div class="lane">
+    <div class="flight" id="flight">
+      <div class="sleigh-bob">
+        <div class="speech" id="speech">Ho ho ho! 🎅</div>
+        <svg class="sleigh-svg" id="sleigh" viewBox="0 -60 980 340" role="img" aria-label="Me wearing a Santa hat, driving Santa's sleigh with Santa and his reindeer">
+          <defs>
+            <radialGradient id="rudolphGlow">
+              <stop offset="0" stop-color="#ff4d4d" stop-opacity="0.9" />
+              <stop offset="1" stop-color="#ff4d4d" stop-opacity="0" />
+            </radialGradient>
+            <linearGradient id="sleighRed" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#e2343f" />
+              <stop offset="1" stop-color="#9c1424" />
+            </linearGradient>
+            <radialGradient id="skin" cx="0.4" cy="0.35">
+              <stop offset="0" stop-color="#ffe0c7" />
+              <stop offset="1" stop-color="#f2b48f" />
+            </radialGradient>
+
+            <!-- Reindeer, facing right -->
+            <symbol id="deer" viewBox="0 0 170 135" overflow="visible">
+              <g class="legs-back">
+                <path d="M42 84 L30 114" stroke="#6e4220" stroke-width="7" stroke-linecap="round" />
+                <path d="M54 86 L66 116" stroke="#6e4220" stroke-width="7" stroke-linecap="round" />
+              </g>
+              <g class="legs-front">
+                <path d="M96 84 L82 112" stroke="#6e4220" stroke-width="7" stroke-linecap="round" />
+                <path d="M106 84 L120 114" stroke="#6e4220" stroke-width="7" stroke-linecap="round" />
+              </g>
+              <ellipse cx="22" cy="62" rx="9" ry="7" fill="#f6e7d4" />
+              <ellipse cx="72" cy="70" rx="48" ry="24" fill="#8b5a2b" />
+              <ellipse cx="74" cy="80" rx="34" ry="12" fill="#a87447" />
+              <path d="M98 60 L114 26 L132 32 L118 76 Z" fill="#8b5a2b" />
+              <ellipse cx="133" cy="27" rx="17" ry="12" fill="#8b5a2b" />
+              <ellipse cx="146" cy="32" rx="10" ry="8" fill="#a87447" />
+              <circle cx="130" cy="22" r="2.6" fill="#1b1208" />
+              <ellipse cx="119" cy="18" rx="8" ry="3.5" fill="#6e4220" transform="rotate(-25 119 18)" />
+              <path d="M126 16 L120 -2 M122 6 L111 1 M134 15 L140 -4 M138 5 L149 0" stroke="#e0bf93" stroke-width="4.5" stroke-linecap="round" fill="none" />
+              <path d="M104 52 Q116 60 124 50" stroke="#c8102e" stroke-width="7" fill="none" stroke-linecap="round" />
+              <circle cx="114" cy="60" r="4.5" fill="#f4c542" stroke="#b8860b" stroke-width="1" />
+              <rect x="56" y="44" width="34" height="9" rx="3" fill="#c8102e" />
+            </symbol>
+          </defs>
+
+          <!-- sparkle trail -->
+          <g class="trail">
+            <circle cx="-10" cy="220" r="4" /><circle cx="-40" cy="210" r="3" /><circle cx="-70" cy="225" r="2.5" />
+            <circle cx="-100" cy="205" r="2" /><circle cx="-130" cy="218" r="1.6" />
+          </g>
+
+          <!-- reins -->
+          <path d="M290 150 Q 360 120 455 160 Q 540 120 620 150 Q 700 110 790 135" stroke="#f4c542" stroke-width="2.5" fill="none" />
+
+          <!-- reindeer team -->
+          <g class="deer d1"><use href="#deer" x="350" y="120" width="170" height="135" /></g>
+          <g class="deer d2"><use href="#deer" x="510" y="105" width="170" height="135" /></g>
+          <g class="deer d3 rudolph">
+            <circle cx="820" cy="122" r="22" fill="url(#rudolphGlow)" class="glow" />
+            <use href="#deer" x="670" y="90" width="170" height="135" />
+            <circle cx="821" cy="122" r="5.5" fill="#ff2a2a" />
+          </g>
+
+          <!-- gift sack -->
+          <g>
+            <path d="M28 160 Q10 110 50 92 Q70 80 92 96 Q120 120 100 165 Z" fill="#7a4b2a" />
+            <path d="M44 96 Q62 84 84 96" stroke="#5a3418" stroke-width="5" fill="none" />
+            <rect x="40" y="64" width="26" height="26" rx="3" fill="#2f7d4a" transform="rotate(-12 53 77)" />
+            <rect x="51" y="62" width="5" height="28" fill="#f4c542" transform="rotate(-12 53 77)" />
+            <rect x="68" y="72" width="22" height="22" rx="3" fill="#3a8fd6" transform="rotate(10 79 83)" />
+            <rect x="77" y="72" width="4" height="22" fill="#fff" transform="rotate(10 79 83)" />
+          </g>
+
+          <!-- Santa in the back seat -->
+          <g class="santa">
+            <ellipse cx="125" cy="150" rx="44" ry="40" fill="#d42433" />
+            <rect x="84" y="150" width="82" height="10" fill="#1d1d1d" />
+            <rect x="117" y="148" width="16" height="14" rx="2" fill="#f4c542" />
+            <g class="santa-arm">
+              <path d="M150 130 Q 175 110 180 80" stroke="#d42433" stroke-width="16" stroke-linecap="round" fill="none" />
+              <circle cx="181" cy="74" r="10" fill="#fff" />
+            </g>
+            <circle cx="125" cy="92" r="27" fill="url(#skin)" />
+            <path d="M98 96 Q100 140 125 146 Q150 140 152 96 Q140 110 125 108 Q110 110 98 96 Z" fill="#fff" />
+            <path d="M112 108 Q125 100 138 108" stroke="#fff" stroke-width="7" stroke-linecap="round" fill="none" />
+            <circle cx="125" cy="99" r="5" fill="#f19a8e" />
+            <circle cx="116" cy="89" r="2.6" fill="#1b1208" /><circle cx="134" cy="89" r="2.6" fill="#1b1208" />
+            <path d="M100 76 Q115 40 150 52 Q166 58 168 78" fill="#d42433" />
+            <circle cx="170" cy="80" r="7" fill="#fff" />
+            <rect x="96" y="70" width="58" height="12" rx="6" fill="#fff" />
+          </g>
+
+          <!-- sleigh body -->
+          <path d="M40 240 L300 240 Q326 240 326 210 L326 158 Q300 166 280 166 L150 166 Q140 112 80 104 Q32 100 30 150 L30 228 Q30 240 40 240 Z" fill="url(#sleighRed)" stroke="#f4c542" stroke-width="5" />
+          <text x="185" y="195" text-anchor="middle" fill="#ffffff" font-size="24" font-weight="900" stroke="#8b0000" stroke-width="2" letter-spacing="1"> SECRET SANTA </text>
+          <path d="M70 200 Q100 180 130 200 T190 200 T250 200 T300 200" stroke="#f4c542" stroke-width="3" fill="none" opacity=".85" />
+          <circle cx="100" cy="215" r="6" fill="#f4c542" /><circle cx="200" cy="215" r="6" fill="#f4c542" /><circle cx="290" cy="215" r="6" fill="#f4c542" />
+          <path d="M60 240 L56 262 M160 240 L160 262 M270 240 L272 262" stroke="#c99a2e" stroke-width="6" />
+          <path d="M14 262 L330 262 Q372 262 368 226 Q366 210 352 212" stroke="#f4c542" stroke-width="8" fill="none" stroke-linecap="round" />
+
+          <!-- The driver: ME! -->
+          <g class="driver">
+            <path d="M196 170 Q196 120 240 118 Q284 120 284 170 Z" fill="#c8102e" />
+            <path d="M232 120 L240 168 L248 120" fill="#fff" />
+            <path d="M270 140 Q290 140 296 150" stroke="#c8102e" stroke-width="14" stroke-linecap="round" fill="none" />
+            <circle cx="296" cy="150" r="8" fill="#2f7d4a" />
+
+            <g class="bubble-head" id="bubbleHead">
+              <g id="fallbackFace">
+                <circle cx="235" cy="70" r="62" fill="url(#skin)" />
+                <path d="M175 62 Q178 6 235 8 Q292 6 296 62 Q284 34 262 30 Q240 46 206 34 Q186 40 175 62 Z" fill="#4a2c1a" />
+                <ellipse cx="214" cy="74" rx="6" ry="8" fill="#1b1208" /><ellipse cx="256" cy="74" rx="6" ry="8" fill="#1b1208" />
+                <circle cx="216" cy="71" r="2" fill="#fff" /><circle cx="258" cy="71" r="2" fill="#fff" />
+                <circle cx="200" cy="92" r="9" fill="#ff9a9a" opacity=".6" /><circle cx="270" cy="92" r="9" fill="#ff9a9a" opacity=".6" />
+                <path d="M218 98 Q235 114 252 98" stroke="#8a2b2b" stroke-width="4" stroke-linecap="round" fill="none" />
+              </g>
+              <!-- Santa hat -->
+              <g class="hat">
+                <path d="M178 26 Q190 -46 262 -50 Q312 -48 330 6 Q322 -20 296 -18 Q300 0 292 22 Z" fill="#d42433" />
+                <path d="M262 -50 Q312 -48 330 6" stroke="#a5101f" stroke-width="3" fill="none" opacity=".5" />
+                <circle cx="332" cy="10" r="15" fill="#fff" />
+                <rect x="166" y="14" width="138" height="26" rx="13" fill="#fff" transform="rotate(-6 235 27)" />
+              </g>
+            </g>
+          </g>
+        </svg>
+      </div>
+    </div>
+    </div>
+
+    <svg class="village" viewBox="0 0 1440 260" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 160 Q 240 90 480 150 T 960 130 T 1440 140 L1440 260 L0 260 Z" fill="#dfeaf2" />
+      <path d="M0 200 Q 300 150 620 195 T 1440 185 L1440 260 L0 260 Z" fill="#fff" />
+    </svg>
+    <div class="village-items" aria-hidden="true">
+      <div class="tree t1"></div><div class="tree t2"></div><div class="house h1"><i></i><i></i></div>
+      <div class="tree t3"></div><div class="house h2"><i></i></div><div class="tree t4"></div><div class="tree t5"></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="countdown-wrap" aria-label="Countdown to Christmas">
+      <div class="countdown" id="countdown">
+        <div><b id="cd-d">--</b><span>days</span></div>
+        <div><b id="cd-h">--</b><span>hours</span></div>
+        <div><b id="cd-m">--</b><span>mins</span></div>
+        <div><b id="cd-s">--</b><span>secs</span></div>
+      </div>
+      <p class="countdown-label" id="cd-label">to go until Christmas, 12 midnight 🎄</p>
+
+      <div class="dyk" id="dyk">
+        <p class="dyk-tease" id="dykTease">🤫 Psst… there’s a little December secret hiding here. Only the curious click! 👀</p>
+        <ol class="dyk-reveals" id="dykReveals" aria-live="polite"></ol>
+        <button class="btn btn-gold dyk-btn" id="dykBtn" type="button"><span class="dyk-q">❓</span> DO YOU KNOW? <span class="dyk-q">❓</span></button>
+      </div>
+    </section>
+
+    <section id="wishlist" class="section">
+      <div class="section-head">
+        <h2>Dear Santa, I wish for…</h2>
+        <p>Browse the little Christmas catalog 📖 Create your own wishlist, browse everyone else's wishes, and find the perfect Christmas gift. 🎁</p>
+        <p>The magic of Christmas starts with a list. Drop your wishes, find your giftee, and let’s make the season bright.🎄</p>
+      </div>
+      <div class="wishlist-toolbar">
+        <button
+            class="btn btn-gold"
+            id="addWishlistBtn">
+
+            ➕ Add Wishlist
+
+        </button>
+      </div>
+      <div class="wishlist-tabs">
+
+      </div>
+      <div class="sample-banner" id="sampleBanner" hidden>✨ These are sample wishes — the real list appears once the owner passcode is set up and wishes are added.</div>
+      <div class="grid" id="wishGrid"><p class="loading">Checking Santa’s list twice…</p></div>
+    </section>
+
+    <section id="notes" class="section tree-notes">
+      <div class="section-head">
+        <h2>Notes by the Christmas Tree</h2>
+        <p>Leave a message for <b>everyone</b> — a greeting, a memory, a wish, or a terrible Christmas joke. Every note goes into our Christmas notebook, which I’ll download and send to everyone! 💌</p>
+      </div>
+      <div class="tree-notes-layout">
+        <div class="xmas-tree" aria-hidden="true">
+          <span class="xt-star">★</span>
+          <span class="xt-tier xt1"></span><span class="xt-tier xt2"></span><span class="xt-tier xt3"></span>
+          <span class="xt-trunk"></span>
+          <i style="left:46%;top:22%"></i><i style="left:36%;top:40%"></i><i style="left:58%;top:46%"></i>
+          <i style="left:28%;top:64%"></i><i style="left:50%;top:60%"></i><i style="left:68%;top:70%"></i>
+          <span class="xt-gift g1">🎁</span><span class="xt-gift g2">🎁</span>
+        </div>
+        <form id="noteForm" class="note-form">
+          <input name="name" maxlength="60" placeholder="Your name" required />
+          <textarea name="message" maxlength="400" rows="4" placeholder="Merry Christmas, everyone! …" required></textarea>
+          <button class="btn btn-red" type="submit">Leave my note by the tree 🎄</button>
+        </form>
+      </div>
+
+      <div class="notebook-bar">
+        <p id="notesCount">Our Christmas notebook</p>
+        <button class="btn btn-gold owner-only" id="downloadNotes" type="button">📥 Download notebook (PDF)</button>
+      </div>
+      <div class="notebook" id="notebook">
+        <div class="notebook-cover">
+          <p class="nb-eyebrow">✦ Merry Christmas ✦</p>
+          <h3>Notes by the Christmas Tree</h3>
+          <p class="nb-year" id="nbYear"></p>
+        </div>
+        <div class="notebook-pages" id="notesWall"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Made with 🎄, ☕ , ❤️ and a lot of jingle bells.</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="/app.js" type="module"></script>
+
+  <audio
+    id="bgMusic"
+    loop>
+
+    <source
+        src="assets/music/pasko-sa-pinas.mp3"
+        type="audio/mpeg">
+
+</body>
+</html>
