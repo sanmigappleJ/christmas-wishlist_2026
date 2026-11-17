@@ -570,9 +570,89 @@ function renderNotes() {
     : `<p class="nb-empty">No notes yet… be the first!</p>`;
 }
 
+const loadScript = (src) => new Promise((resolve, reject) => {
+  if (document.querySelector(`script[src="${src}"]`)) return resolve();
+  const s = document.createElement("script");
+  s.src = src;
+  s.onload = resolve;
+  s.onerror = reject;
+  document.head.appendChild(s);
+});
+
+// Lay the notes out on A4-sized notebook pages, then snapshot each page into a PDF.
+async function downloadNotebook() {
+  const password = prompt("Enter owner password");
+
+  if (password !== "i<3YukioYuki") {
+    alert("Incorrect password");
+    return;
+  }
+
+  if (!allNotes.length) return toast("No notes yet — leave the first one! 🎄");
+  const btn = $("#downloadNotes");
+  btn.disabled = true;
+  btn.textContent = "✍️ Binding the notebook…";
+  const holder = document.createElement("div");
+  holder.className = "pdf-holder";
+  document.body.appendChild(holder);
+
+  try {
+    const CDN_JS = "https://cdnjs.cloudflare.com" + "/ajax/libs/";
+    await Promise.all([
+      loadScript(CDN_JS + "html2canvas/1.4.1/html2canvas.min.js"),
+      loadScript(CDN_JS + "jspdf/2.5.1/jspdf.umd.min.js"),
+    ]);
+    await document.fonts?.ready;
+    const year = new Date().getFullYear();
+    const newPage = (first) => {
+      const page = document.createElement("section");
+      page.className = "pdf-page";
+      page.innerHTML = `${first ? `<header class="pdf-cover"><p>✦ Merry Christmas ✦</p><h1>Notes by the Christmas Tree</h1><p>${year} · ${allNotes.length} note${allNotes.length === 1 ? "" : "s"} from everyone 🎄</p></header>` : ""}<div class="pdf-content"></div><div class="pdf-foot"></div>`;
+      holder.appendChild(page);
+      return page;
+    };
+    const pages = [newPage(true)];
+    for (const n of allNotes) {
+      let content = pages.at(-1).querySelector(".pdf-content");
+      const wrap = document.createElement("div");
+      wrap.innerHTML = noteHtml(n, false);
+      const el = wrap.firstElementChild;
+      content.appendChild(el);
+      if (content.scrollHeight > content.clientHeight && content.children.length > 1) {
+        el.remove();
+        pages.push(newPage(false));
+        content = pages.at(-1).querySelector(".pdf-content");
+        content.appendChild(el);
+      }
+    }
+    pages.forEach((p, i) => (p.querySelector(".pdf-foot").textContent = `~ ${i + 1} / ${pages.length} ~`));
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "pt", format: "a4" });
+    const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
+    for (let i = 0; i < pages.length; i++) {
+      const canvas = await window.html2canvas(pages[i], { scale: 2, backgroundColor: "#fffdf5", useCORS: true });
+      if (i) pdf.addPage();
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, W, H);
+    }
+    pdf.save(`christmas-notebook-${year}.pdf`);
+    toast("Your Christmas notebook is ready! 📖");
+  } catch {
+    toast("Opening the print dialog — choose “Save as PDF” 🖨️");
+    window.print();
+  } finally {
+    holder.remove();
+    btn.disabled = false;
+    btn.textContent = "📥 Download notebook (PDF)";
+  }
+}
+
 function setupNotes() {
-  $("#nbYear").textContent = `Christmas ${new Date().getFullYear()}`;
-  $("#downloadNotes").addEventListener("click", downloadNotebook);
+  const nbYear = document.getElementById("nbYear");
+  if (nbYear) nbYear.textContent = `Christmas ${new Date().getFullYear()}`;
+
+  const dlBtn = document.getElementById("downloadNotes");
+  if (dlBtn) dlBtn.addEventListener("click", downloadNotebook);
 
   // Real-time listener: syncs notes automatically across all family devices
   onSnapshot(query(notesRef, orderBy("createdAt", "asc")), (snapshot) => {
@@ -580,30 +660,50 @@ function setupNotes() {
     renderNotes();
   });
 
-  $("#noteForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const form = e.target;
+  const noteForm = document.getElementById("noteForm");
+  if (noteForm) {
+    noteForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const submitBtn = noteForm.querySelector('button[type="submit"]');
+      if (submitBtn && submitBtn.disabled) return; // Prevent double-clicks
 
-    await addDoc(notesRef, {
-      name: form.name.value,
-      message: form.message.value,
-      createdAt: Date.now()
+      const name = noteForm.name.value.trim();
+      const message = noteForm.message.value.trim();
+      if (!name || !message) return;
+
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        await addDoc(notesRef, {
+          name,
+          message,
+          createdAt: Date.now()
+        });
+
+        noteForm.reset();
+        toast("Note added! 🎄");
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
     });
+  }
 
-    form.reset();
-    toast("Note added! 🎄");
-  });
 
-  $("#notesWall").addEventListener("click", async (e) => {
-    const d = e.target.closest("[data-del-note]");
-    if (!d) return;
+  const notesWall = document.getElementById("notesWall");
+  if (notesWall) {
+    notesWall.addEventListener("click", async (e) => {
+      const d = e.target.closest("[data-del-note]");
+      if (!d) return;
 
-    if (!confirm("Remove this note?")) return;
+      if (!confirm("Remove this note?")) return;
 
-    await deleteDoc(doc(db, "notes", d.dataset.delNote));
-    toast("Note removed 🗑️");
-  });
+      await deleteDoc(doc(db, "notes", d.dataset.delNote));
+      toast("Note removed 🗑️");
+    });
+  }
 }
+
+setupNotes();
 
 /* ---------------- Welcome ---------------- */
 function setupWelcomeDialog() {
