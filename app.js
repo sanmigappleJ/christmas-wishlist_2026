@@ -8,7 +8,9 @@
   deleteDoc,
   onSnapshot,
   query,
-  orderBy
+  orderBy,
+  arrayUnion,
+  arrayRemove
 } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -346,24 +348,28 @@ function birthdayTune() {
 
 /* ---------------- wishes ---------------- */
 let wishlists = [];
-let activeWishlist = null;
+let activeWishlistId = null; // Track by unique Firestore ID instead of index 0, 1, 2
 const wishlistsRef = collection(db, "wishlists");
 
-// Real-time listener: updates wishlists automatically across all devices
 onSnapshot(query(wishlistsRef, orderBy("createdAt", "asc")), (snapshot) => {
   wishlists = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
   if (!wishlists.length) {
-    activeWishlist = null;
+    activeWishlistId = null;
     document.querySelector("#wishGrid").innerHTML =
       `<p class="loading">Create the first wishlist 🎄</p>`;
-  } else {
-    if (activeWishlist === null || activeWishlist >= wishlists.length) {
-      activeWishlist = 0;
-    }
-    showWishlist(activeWishlist);
+    renderTabs();
+    return;
   }
+
+  // Keep the user on the exact wishlist ID they were viewing
+  const stillExists = wishlists.some((w) => w.id === activeWishlistId);
+  if (!activeWishlistId || !stillExists) {
+    activeWishlistId = wishlists[0].id;
+  }
+
   renderTabs();
+  showWishlist(activeWishlistId);
 });
 
 document.getElementById("addWishlistBtn").addEventListener("click", () => {
@@ -390,57 +396,66 @@ async function createWishlist() {
     return;
   }
 
-  activeWishlist = wishlists.length;
   ownerInput.value = "";
   document.getElementById("wishlistDialog").close();
 
-  await addDoc(wishlistsRef, {
+  // Save new wishlist and lock THIS device onto the newly created ID
+  const docRef = await addDoc(wishlistsRef, {
     owner,
     wishes: [],
     createdAt: Date.now()
   });
+
+  activeWishlistId = docRef.id;
+  renderTabs();
+  showWishlist(activeWishlistId);
 }
 
 function renderTabs() {
   const container = document.querySelector(".wishlist-tabs");
   container.innerHTML = "";
 
-  wishlists.forEach((list, index) => {
+  wishlists.forEach((list) => {
     const btn = document.createElement("button");
     btn.className = "wishlist-tab";
-    if (index === activeWishlist) btn.classList.add("active");
+    if (list.id === activeWishlistId) btn.classList.add("active");
 
     btn.innerHTML = `
-      🎁 ${list.owner}
-      <span class="wishlist-remove" onclick="event.stopPropagation(); deleteWishlist(${index});">
+      🎁 ${esc(list.owner)}
+      <span class="wishlist-remove" onclick="event.stopPropagation(); deleteWishlist('${list.id}');">
         ✕
       </span>
     `;
 
     btn.onclick = () => {
-      activeWishlist = index;
+      activeWishlistId = list.id;
       renderTabs();
-      showWishlist(index);
+      showWishlist(list.id);
     };
 
     container.appendChild(btn);
   });
 }
 
-function showWishlist(index) {
-  const list = wishlists[index];
+function showWishlist(id) {
+  const list = wishlists.find((w) => w.id === id);
   if (!list) return;
+
+  // Preserve anything the user is currently typing in the inputs before re-rendering
+  const draftTitle = document.getElementById("wishTitle")?.value || "";
+  const draftLink = document.getElementById("wishLink")?.value || "";
+  const draftPrice = document.getElementById("wishPrice")?.value || "";
 
   document.querySelector("#wishGrid").innerHTML = `
     <div class="wishlist-page">
-      <h2>🎁 ${list.owner}'s Wishlist</h2>
+      <h2>🎁 ${esc(list.owner)}'s Wishlist</h2>
       <p class="wishlist-count">${list.wishes.length}/9 Wishes</p>
 
       <div class="wish-form">
-        <input id="wishTitle" placeholder="Wish name">
-        <input id="wishLink" placeholder="Product link">
-        <input id="wishPrice" placeholder="Price">
-        <button class="btn btn-gold" onclick="addWish(${index})">Add Wish</button>
+        <input id="wishTitle" placeholder="Wish name" value="${esc(draftTitle)}">
+        <input id="wishLink" placeholder="Product link" value="${esc(draftLink)}">
+        <input id="wishPrice" placeholder="Price" value="${esc(draftPrice)}">
+        <button class="btn btn-gold" onclick="addWish('${list.id}')">Add Wish</button>
       </div>
 
       <div class="wishlist-items">
@@ -451,15 +466,15 @@ function showWishlist(index) {
                 .map(
                   (wish, wishIndex) => `
                 <div class="wish">
-                  <button class="del" onclick="deleteWish(${index}, ${wishIndex})">✕</button>
+                  <button class="del" onclick="deleteWish('${list.id}', ${wishIndex})">✕</button>
                   <div class="catalog-body">
-                    <h3>${wish.title}</h3>
+                    <h3>${esc(wish.title)}</h3>
                     <div class="meta">
-                      <span class="price">${wish.price || ""}</span>
+                      <span class="price">${esc(wish.price || "")}</span>
                     </div>
                     ${
                       wish.link
-                        ? `<a href="${wish.link}" target="_blank" class="shop">View Item ↗</a>`
+                        ? `<a href="${esc(wish.link)}" target="_blank" class="shop">View Item ↗</a>`
                         : `<span class="shop">No link provided</span>`
                     }
                   </div>
@@ -472,44 +487,58 @@ function showWishlist(index) {
   `;
 }
 
-window.addWish = async function (index) {
-  const title = document.getElementById("wishTitle").value.trim();
-  const link = document.getElementById("wishLink").value.trim();
-  const price = document.getElementById("wishPrice").value.trim();
+window.addWish = async function (id) {
+  const titleEl = document.getElementById("wishTitle");
+  const linkEl = document.getElementById("wishLink");
+  const priceEl = document.getElementById("wishPrice");
+
+  const title = titleEl.value.trim();
+  const link = linkEl.value.trim();
+  const price = priceEl.value.trim();
 
   if (!title) {
     alert("Please enter a wish name.");
     return;
   }
 
-  const targetList = wishlists[index];
+  const targetList = wishlists.find((w) => w.id === id);
+  if (!targetList) return;
+
   if (targetList.wishes.length >= 9) {
     alert("Maximum of 9 wishes allowed 🎁");
     return;
   }
 
-  const updatedWishes = [...targetList.wishes, { title, link, price }];
-  await updateDoc(doc(db, "wishlists", targetList.id), {
-    wishes: updatedWishes
+  // Clear inputs immediately so draft preservation doesn't refill them
+  titleEl.value = "";
+  linkEl.value = "";
+  priceEl.value = "";
+
+  // Safely append to this specific person's wishlist without overwriting others
+  await updateDoc(doc(db, "wishlists", id), {
+    wishes: arrayUnion({ id: Date.now(), title, link, price })
   });
 };
 
-window.deleteWish = async function (wishlistIndex, wishIndex) {
+window.deleteWish = async function (id, wishIndex) {
   if (!confirm("Delete this wish?")) return;
 
-  const targetList = wishlists[wishlistIndex];
-  const updatedWishes = targetList.wishes.filter((_, i) => i !== wishIndex);
+  const targetList = wishlists.find((w) => w.id === id);
+  if (!targetList) return;
 
-  await updateDoc(doc(db, "wishlists", targetList.id), {
-    wishes: updatedWishes
+  const wishToRemove = targetList.wishes[wishIndex];
+  await updateDoc(doc(db, "wishlists", id), {
+    wishes: arrayRemove(wishToRemove)
   });
 };
 
-window.deleteWishlist = async function (index) {
-  const targetList = wishlists[index];
+window.deleteWishlist = async function (id) {
+  const targetList = wishlists.find((w) => w.id === id);
+  if (!targetList) return;
+
   if (!confirm(`Delete ${targetList.owner}'s wishlist?`)) return;
 
-  await deleteDoc(doc(db, "wishlists", targetList.id));
+  await deleteDoc(doc(db, "wishlists", id));
 };
 
 /* ---------------- notes ---------------- */
