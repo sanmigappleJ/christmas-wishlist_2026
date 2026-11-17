@@ -1,5 +1,5 @@
-import { initializeApp } from "https://gstatic.com";
-import {
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+  import {
   getFirestore,
   collection,
   doc,
@@ -9,15 +9,15 @@ import {
   onSnapshot,
   query,
   orderBy
-} from "https://gstatic.com";
+} from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBU-9TxC1k3fHTdGSdd1ti2S70H4QtjpkQ",
-  authDomain: "christmas-wishlist-2026.firebaseapp.com",
-  projectId: "christmas-wishlist-2026",
-  storageBucket: "christmas-wishlist-2026.firebasestorage.app",
-  messagingSenderId: "31993292527",
-  appId: "1:31993292527:web:757c3ec22e483b2b4b9d1a"
+    apiKey: "AIzaSyBU-9TxC1k3fHTdGSdd1ti2S70H4QtjpkQ",
+    authDomain: "christmas-wishlist-2026.firebaseapp.com",
+    projectId: "christmas-wishlist-2026",
+    storageBucket: "christmas-wishlist-2026.firebasestorage.app",
+    messagingSenderId: "31993292527",
+    appId: "1:31993292527:web:757c3ec22e483b2b4b9d1a"
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
