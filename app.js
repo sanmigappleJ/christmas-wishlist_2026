@@ -647,7 +647,12 @@ async function downloadNotebook() {
   }
 }
 
+let notesInitialized = false;
+
 function setupNotes() {
+  if (notesInitialized) return; // Stops duplicate listeners completely!
+  notesInitialized = true;
+
   const nbYear = document.getElementById("nbYear");
   if (nbYear) nbYear.textContent = `Christmas ${new Date().getFullYear()}`;
 
@@ -665,21 +670,19 @@ function setupNotes() {
     noteForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const submitBtn = noteForm.querySelector('button[type="submit"]');
-      if (submitBtn && submitBtn.disabled) return; // Prevent double-clicks
+      if (submitBtn && submitBtn.disabled) return;
 
       const name = noteForm.name.value.trim();
       const message = noteForm.message.value.trim();
       if (!name || !message) return;
 
       if (submitBtn) submitBtn.disabled = true;
-
       try {
         await addDoc(notesRef, {
           name,
           message,
           createdAt: Date.now()
         });
-
         noteForm.reset();
         toast("Note added! 🎄");
       } finally {
@@ -688,22 +691,20 @@ function setupNotes() {
     });
   }
 
-
   const notesWall = document.getElementById("notesWall");
   if (notesWall) {
     notesWall.addEventListener("click", async (e) => {
       const d = e.target.closest("[data-del-note]");
-      if (!d) return;
+      if (!d || d.disabled) return;
 
       if (!confirm("Remove this note?")) return;
 
+      d.disabled = true; // Prevents double-clicking the ✕ button
       await deleteDoc(doc(db, "notes", d.dataset.delNote));
       toast("Note removed 🗑️");
     });
   }
 }
-
-setupNotes();
 
 /* ---------------- Welcome ---------------- */
 function setupWelcomeDialog() {
