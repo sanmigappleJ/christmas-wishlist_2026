@@ -772,74 +772,37 @@ const noteHtml = (n, del = true) => `
   </article>`;
 
 function loadNotes() {
+  allNotes = JSON.parse(localStorage.getItem("christmasNotes")) || [];
 
-    allNotes =
-    JSON.parse(
-        localStorage.getItem(
-            "christmasNotes"
-        )
-    ) || [];
+  const wall = document.getElementById("notesWall");
 
-    const wall =
-    document.getElementById(
-        "notesWall"
-    );
+  document.getElementById("notesCount").textContent = allNotes.length
+    ? `📖 ${allNotes.length} notes in our Christmas notebook`
+    : "📖 Our Christmas notebook";
 
-    document.getElementById(
-        "notesCount"
-    ).textContent =
-
-    allNotes.length
-
-    ?
-
-    `📖 ${allNotes.length} notes in our Christmas notebook`
-
-    :
-
-    "📖 Our Christmas notebook";
-
-    wall.innerHTML =
-
-    allNotes.length
-
-    ?
-
-    allNotes.map(
-        note => noteHtml(note)
-    ).join("")
-
-    :
-
-    `<p class="nb-empty">
-        No notes yet… be the first!
-     </p>`;
+  wall.innerHTML = allNotes.length
+    ? allNotes.map((note) => noteHtml(note)).join("")
+    : `<p class="nb-empty">No notes yet… be the first!</p>`;
 }
 
 const loadScript = (src) => new Promise((resolve, reject) => {
   if (document.querySelector(`script[src="${src}"]`)) return resolve();
   const s = document.createElement("script");
-  s.src = src; s.onload = resolve; s.onerror = reject;
+  s.src = src;
+  s.onload = resolve;
+  s.onerror = reject;
   document.head.appendChild(s);
 });
 
 // Lay the notes out on A4-sized notebook pages, then snapshot each page into a PDF.
 async function downloadNotebook() {
-  const password =
-  prompt(
-      "Enter owner password"
-  );
+  const password = prompt("Enter owner password");
 
-  if(
-      password !== "i<3YukioYuki"
-  ){
-
-      alert(
-          "Incorrect password"
-      );
-
-      return;
+  if (password !== "i<3YukioYuki") {
+    alert("Incorrect password");
+    return;
   }
+
   if (!allNotes.length) return toast("No notes yet — leave the first one! 🎄");
   const btn = $("#downloadNotes");
   btn.disabled = true;
@@ -847,10 +810,11 @@ async function downloadNotebook() {
   const holder = document.createElement("div");
   holder.className = "pdf-holder";
   document.body.appendChild(holder);
+
   try {
     await Promise.all([
-      loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
-      loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),
+      loadScript("https://cloudflare.com"),
+      loadScript("https://cloudflare.com"),
     ]);
     await document.fonts?.ready;
     const year = new Date().getFullYear();
@@ -899,110 +863,45 @@ async function downloadNotebook() {
 
 function setupNotes() {
   $("#nbYear").textContent = `Christmas ${new Date().getFullYear()}`;
+  
+  // ✅ THIS LINE WAS MISSING: Loads saved notes immediately on page load/refresh
+  loadNotes();
+
   $("#downloadNotes").addEventListener("click", downloadNotebook);
-$("#noteForm").addEventListener(
-    "submit",
 
-    (e) => {
+  $("#noteForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const form = e.target;
 
-        e.preventDefault();
+    const note = {
+      id: Date.now(),
+      name: form.name.value,
+      message: form.message.value,
+      createdAt: new Date()
+    };
 
-        const form =
-        e.target;
+    allNotes.push(note);
+    localStorage.setItem("christmasNotes", JSON.stringify(allNotes));
 
-        const note = {
+    form.reset();
+    toast("Note added! 🎄");
+    loadNotes();
+  });
 
-            id:
-            Date.now(),
+  $("#notesWall").addEventListener("click", (e) => {
+    const d = e.target.closest("[data-del-note]");
+    if (!d) return;
 
-            name:
-            form.name.value,
+    if (!confirm("Remove this note?")) return;
 
-            message:
-            form.message.value,
+    allNotes = allNotes.filter((note) => note.id != d.dataset.delNote);
+    localStorage.setItem("christmasNotes", JSON.stringify(allNotes));
 
-            createdAt:
-            new Date()
-        };
-
-        allNotes.push(
-            note
-        );
-
-        localStorage.setItem(
-
-            "christmasNotes",
-
-            JSON.stringify(
-                allNotes
-            )
-
-        );
-
-        form.reset();
-
-        toast(
-          "Note added! 🎄"
-        );
-
-        loadNotes();
-
-    }
-);
-    $("#notesWall").addEventListener(
-      "click",
-
-      (e) => {
-
-          const d =
-          e.target.closest(
-              "[data-del-note]"
-          );
-
-          if(
-              !d
-          ){
-              return;
-          }
-
-          if(
-              !confirm(
-                  "Remove this note?"
-              )
-          ){
-              return;
-          }
-
-          allNotes =
-          allNotes.filter(
-
-              note =>
-
-              note.id !=
-              d.dataset.delNote
-
-          );
-
-          localStorage.setItem(
-
-              "christmasNotes",
-
-              JSON.stringify(
-                  allNotes
-              )
-
-          );
-
-          loadNotes();
-
-          toast(
-              "Note removed 🗑️"
-          );
-
-      }
-  );
-
+    loadNotes();
+    toast("Note removed 🗑️");
+  });
 }
+
 
 /* ---------------- Welcome ---------------- */
 function setupWelcomeDialog() {
